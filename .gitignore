@@ -5,7 +5,8 @@ __pycache__/
 
 .env
 cache/
-data/
+data/Covid Data.csv
+data/data.csv
 .vscode/
 # C extensions
 *.so
