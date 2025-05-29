@@ -1,4 +1,4 @@
-from model.decision_tree_scratch import DecisionTreeScratch
+from model.decision_tree import DecisionTree
 import numpy as np
 import pandas as pd
 import random
@@ -127,7 +127,7 @@ class RandomForest:
         for i in range(self.n_estimators):
             X_sample, y_sample = self._sample_data(X, y)
 
-            tree = DecisionTreeScratch(
+            tree = DecisionTree(
                 criterion=self.criterion,
                 max_depth=self.max_depth,
                 min_samples_split=self.min_samples_split,

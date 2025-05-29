@@ -20,7 +20,7 @@ class TreeNode:
     def is_leaf(self):
         return self.proba is not None
 
-class DecisionTreeScratch:
+class DecisionTree:
     def __init__(
         self,
         criterion: str = 'gini',

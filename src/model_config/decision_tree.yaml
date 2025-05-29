@@ -1,5 +1,5 @@
 model:
-  type: DecisionTreeScratch
+  type: DecisionTree
   params:
     criterion: "log_loss"
     splitter: "random"

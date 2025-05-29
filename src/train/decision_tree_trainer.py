@@ -1,17 +1,17 @@
 from pathlib import Path
-from model.random_forest import RandomForest
+from model.decision_tree import DecisionTree
 from utils.metrics import calculate_metrics
 from utils.model_utils import save_checkpoint, setup_logging
 
-class RandomForestTrainer:
+class DecisionTreeTrainer:
     def __init__(self, config):
         self.config = config
-        self.model = RandomForest(**config.get('params', {}))
+        self.model = DecisionTree(**config.get('params', {}))
 
     def train(self, X_train, y_train, X_val, y_val, output_dir: Path):
         # Setup log 
         logger = setup_logging(output_dir / 'training_log.txt')
-        logger.info(f"Training Random Forest with parameters: {self.config.get('params', {})}")
+        logger.info(f"Training Decision Tree with parameters: {self.config.get('params', {})}")
 
         # fit 
         self.model.fit(X=X_train, y=y_train)
