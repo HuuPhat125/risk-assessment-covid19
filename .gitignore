@@ -5,6 +5,7 @@ __pycache__/
 
 .env
 cache/
+results
 data/Covid Data.csv
 data/data.csv
 .vscode/

@@ -1,0 +1,11 @@
+model:
+  type: DecisionTreeScratch
+  params:
+    criterion: "log_loss"
+    splitter: "random"
+    max_depth: 10
+    min_samples_split: 4
+    min_samples_leaf: 2
+    max_features: null
+    random_state: 42
+    max_leaf_nodes: null

@@ -1,4 +1,4 @@
 from .logistic_regression_trainer import LogisticRegressionTrainer
-from .naive_bayes_trainer import NaiveBayesTrainer
+from .random_forest_trainer import RandomForestTrainer
 
-__all__ = ['LogisticRegressionTrainer', 'NaiveBayesTrainer']
+__all__ = ['LogisticRegressionTrainer', 'RandomForestTrainer']
