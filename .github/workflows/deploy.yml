@@ -38,14 +38,14 @@ jobs:
         run: |
           python deploy.py --model_config logistic_regression
 
-      - name: Save endpoint name
-        id: save-endpoint
-        run: |
-          echo "endpoint_name=$(jq -r '.endpoint_name' Project/deployment_output/endpoint_info.json)" >> "$GITHUB_OUTPUT"
+      # - name: Save endpoint name
+      #   id: save-endpoint
+      #   run: |
+      #     echo "endpoint_name=$(jq -r '.endpoint_name' Project/deployment_output/endpoint_info.json)" >> "$GITHUB_OUTPUT"
 
       - name: Deploy API Gateway + Lambda via CloudFormation
-        env:
-          ENDPOINT_NAME: ${{ steps.save-endpoint.outputs.endpoint_name }}
+        # env:
+        #   ENDPOINT_NAME: ${{ steps.save-endpoint.outputs.endpoint_name }}
         run: |
           aws cloudformation deploy \
             --template-file src/CloudFormation.yml \
