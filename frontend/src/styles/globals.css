@@ -1,0 +1,113 @@
+@import "leaflet/dist/leaflet.css";
+/* Thêm vào styles/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fix Leaflet CSS hydration issues */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+  font-family: inherit;
+}
+
+/* Prevent hydration flash */
+.leaflet-container * {
+  box-sizing: border-box;
+}
+
+/* Fix default marker icons (Leaflet issue với webpack) */
+.leaflet-default-icon-path {
+  background-image: url("https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png");
+}
+
+/* Custom marker styles */
+.hospital-marker {
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
+  transition: filter 0.2s ease;
+}
+
+.hospital-marker:hover {
+  filter: drop-shadow(2px 2px 8px rgba(0, 0, 0, 0.4));
+}
+
+.user-marker {
+  filter: drop-shadow(2px 2px 6px rgba(59, 130, 246, 0.4));
+  animation: pulse-marker 2s infinite;
+}
+
+@keyframes pulse-marker {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Loading states */
+.map-loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Prevent layout shift */
+.map-container {
+  min-height: 500px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Fix popup z-index issues */
+.leaflet-popup-pane {
+  z-index: 1000;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive map adjustments */
+@media (max-width: 768px) {
+  .leaflet-container {
+    height: 400px;
+  }
+  
+  .leaflet-control-container {
+    font-size: 14px;
+  }
+  
+  .leaflet-popup-content-wrapper {
+    max-width: 250px;
+  }
+}
+
+/* Smooth transitions cho components */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
