@@ -7,21 +7,23 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
     f1_score, classification_report
 )
+from typing import Optional, Union
+
 
 class RandomForest:
     def __init__(
         self,
         n_estimators: int = 100,
         criterion: str = 'gini',
-        max_depth: int | None = None,
-        min_samples_split: float | int = 2,
-        min_samples_leaf: float | int = 1,
-        max_features: int | float | None = 'sqrt',
-        random_state: int | None = None,
-        max_leaf_nodes: int | None = None,
+        max_depth: Optional[int] = None,
+        min_samples_split: Union[float, int] = 2,
+        min_samples_leaf: Union[float, int] = 1,
+        max_features: Union[int, float, None] = 'sqrt',
+        random_state: Optional[int] = None,
+        max_leaf_nodes: Optional[int] = None,
         bootstrap: bool = True,
-        max_samples: int | float | None = None,
-        init_log: bool = True
+        max_samples: Union[int, float, None] = None,
+        init_log: bool = True,
     ):
         if criterion in ['gini', 'entropy', 'log_loss']:
             self.criterion = criterion

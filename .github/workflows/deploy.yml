@@ -1,10 +1,8 @@
 name: SageMaker Sentiment Analysis CI/CD - Production
 
 on:
-  # push:
-  #   branches: [master]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 jobs:
   deploy-model:
@@ -21,27 +19,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install boto3 sagemaker pandas wget s3fs python-dotenv scikit-learn numpy nltk beautifulsoup4 html5lib tabulate bandit trufflehog
-
-      - name: Run Bandit
-        run: |
-          bandit -r . -f json -o bandit-report.json || true
-
-      - name: Run TruffleHog
-        run: |
-          trufflehog git . || true
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectKey=lbngyn_sagemaker-deployment
-            -Dsonar.organization=lbngyn
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
+          python -m pip install --upgrade pip
+          pip install boto3 sagemaker pandas wget s3fs python-dotenv scikit-learn numpy beautifulsoup4 html5lib tabulate joblib requests argparse flask
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -50,22 +29,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Terminate existing endpoint
-        continue-on-error: true
-        run: |
-          python - <<EOF
-          import boto3
-
-          client = boto3.client('sagemaker')
-          endpoint_name = '${{ secrets.ENDPOINT_NAME }}'
-
-          try:
-              client.delete_endpoint(EndpointName=endpoint_name)
-              print(f'Endpoint {endpoint_name} deleted')
-          except Exception as e:
-              print(f'No endpoint to delete or error: {e}')
-          EOF
-
       - name: Deploy model to SageMaker
         env:
           PREFIX: ${{ secrets.PREFIX }}
@@ -73,7 +36,6 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
           IAM_ROLE_NAME: ${{ secrets.IAM_ROLE_NAME }}
         run: |
-          cd Project
           python deploy.py
 
       - name: Save endpoint name
@@ -86,8 +48,8 @@ jobs:
           ENDPOINT_NAME: ${{ steps.save-endpoint.outputs.endpoint_name }}
         run: |
           aws cloudformation deploy \
-            --template-file Project/CloudFormation.yml \
-            --stack-name sentiment-api-stack \
+            --template-file src/CloudFormation.yml \
+            --stack-name ml \
             --capabilities CAPABILITY_NAMED_IAM \
             --parameter-overrides EndpointName=${ENDPOINT_NAME}
       

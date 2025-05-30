@@ -25,7 +25,8 @@ def main(args):
             f"Model '{model_type}' is not supported. Choose one of: {list(TRAINER_CLASSES.keys())}")
 
     # Create output directory
-    output_dir = create_output_dir(model_type)
+    output_dir = Path(args.output_dir)
+
 
     # Load data
     X_train, y_train = load_data(args.train_path)
@@ -48,6 +49,8 @@ if __name__ == "__main__":
                         help='Path to the training data CSV file')
     parser.add_argument('--val_path', type=str, required=True,
                         help='Path to the validation data CSV file')
+    parser.add_argument('--output_dir', type=str, required=True,
+                        help='Output dir')
     args = parser.parse_args()
 
     main(args)

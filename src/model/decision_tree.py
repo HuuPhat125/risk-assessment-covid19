@@ -8,6 +8,8 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
     f1_score, classification_report
 )
+from typing import Optional, Union
+
 
 class TreeNode:
     def __init__(self):
@@ -25,12 +27,19 @@ class DecisionTree:
         self,
         criterion: str = 'gini',
         splitter: str = 'best',
-        max_depth: int | None = None,
-        min_samples_split: int | float = 2,
-        min_samples_leaf: int | float = 1,
-        max_features: int | float | str | None = None,
-        random_state: int | None = None,
-        max_leaf_nodes: int | None = None,
+        # max_depth: int | None = None,
+        # min_samples_split: int | float = 2,
+        # min_samples_leaf: int | float = 1,
+        # max_features: int | float | str | None = None,
+        # random_state: int | None = None,
+        # max_leaf_nodes: int | None = None,
+
+        max_depth: Optional[int] = None,
+        min_samples_split: Union[int, float] = 2,
+        min_samples_leaf: Union[int, float] = 1,
+        max_features: Union[int, float, str, None] = None,
+        random_state: Optional[int] = None,
+        max_leaf_nodes: Optional[int] = None,
         init_log: bool = True,
     ):
         if criterion in ['gini', 'entropy', 'log_loss']:
