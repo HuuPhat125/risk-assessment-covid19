@@ -2,21 +2,10 @@ import numpy as np
 
 
 class LogisticRegression:
-    """
-    Logistic Regression classifier.
-    Parameters:
-        learning_rate (float): The learning rate for gradient descent.
-        epochs (int): The number of iterations for training.
-        weights (float): The weights of the model, initialized to None.
-        bias (float): The bias term, initialized to None.
-        losses (list): List to store the loss values during training.
-        accuracies (list): List to store the accuracy values during training.
-    """
-
-    def __init__(self, learning_rate=0.001, epochs=1000, threshold=0.5,
+    def __init__(self, learning_rate=0.001, max_iter=10000, threshold=0.5,
                  regularization=None, reg_param=0.01):
         self.learning_rate = learning_rate
-        self.epochs = epochs
+        self.max_iter = max_iter
         self.threshold = threshold
 
         # Validate regularization parameters
@@ -31,8 +20,6 @@ class LogisticRegression:
         # Model parameters
         self.weights = None
         self.bias = None
-        self.best_weights = None
-        self.best_bias = None
 
         # Training history
         self.train_losses = []
@@ -124,12 +111,16 @@ class LogisticRegression:
         self.weights = np.random.uniform(-limit, limit, n_features)
         self.bias = 0
 
+        # Initialize best weights and bias for early stopping
+        self.best_weights = None
+        self.best_bias = None
+
         # Early stopping variables
         best_val_loss = float('inf')
         patience_counter = 0
 
         # Training loop
-        for epoch in range(self.epochs):
+        for iter in range(self.max_iter):
             # Forward pass
             y_pred_proba = self.predict_proba(X)
 
@@ -167,21 +158,25 @@ class LogisticRegression:
                             f"No improvement in validation loss. Patience: {patience_counter}/{patience}")
 
                     if patience_counter >= patience:
-                        print(f"Early stopping at epoch {epoch + 1}.")
+                        print(f"Early stopping at iteration {iter + 1}.")
                         break
 
-            # Print loss every 100 iterations
-            if epoch % 100 == 0 or epoch == self.epochs - 1:
+            # Print loss every 200 iterations
+            if iter % 200 == 0 or iter == self.max_iter - 1:
                 if has_val:
                     print(
-                        f"Epoch {epoch}/{self.epochs}: Train Loss = {train_loss:.4f}, Train Accuracy = {train_accuracy:.4f}, "
+                        f"Iteration {iter}/{self.max_iter}: Train Loss = {train_loss:.4f}, Train Accuracy = {train_accuracy:.4f}, "
                         f"Val Loss = {val_loss:.4f}, Val Accuracy = {val_accuracy:.4f}")
                 else:
                     print(
-                        f"Epoch {epoch}/{self.epochs}: Train Loss = {train_loss:.4f}, Train Accuracy = {train_accuracy:.4f}")
+                        f"Iteration {iter}/{self.max_iter}: Train Loss = {train_loss:.4f}, Train Accuracy = {train_accuracy:.4f}")
+
+        self.weights = self.best_weights if self.best_weights is not None else self.weights
+        self.bias = self.best_bias if self.best_bias is not None else self.bias
+
         return self
 
-    def get_metrics(self):
+    def get_training_history(self):
         """Return the history of losses and accuracies during training."""
         return {
             'train_losses': self.train_losses,
@@ -190,8 +185,24 @@ class LogisticRegression:
             'val_accuracies': self.val_accuracies,
         }
 
-    def get_best_parameters(self):
-        """Return the best weights and bias after training."""
-        if self.best_weights is None or self.best_bias is None:
-            raise ValueError("Model hasn't been trained with early stopping.")
-        return self.best_weights, self.best_bias
+    def compute_metrics(self, y_true, y_pred):
+        """Compute evaluation metrics."""
+        from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
+        if len(y_true) != len(y_pred):
+            raise ValueError("y_true and y_pred must have the same length.")
+
+        accuracy = accuracy_score(y_true, y_pred)
+        precision = precision_score(y_true, y_pred)
+        recall = recall_score(y_true, y_pred)
+        f1 = f1_score(y_true, y_pred)
+        report = classification_report(y_true, y_pred)
+        conf_matrix = confusion_matrix(y_true, y_pred)
+
+        return {
+            'accuracy': accuracy,
+            'precision': precision,
+            'recall': recall,
+            'f1': f1,
+            'classification_report': report,
+            'confusion_matrix': conf_matrix
+        }

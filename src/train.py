@@ -2,14 +2,17 @@ import argparse
 from pathlib import Path
 from utils.data_processing import load_data
 from utils.model_utils import load_config, create_output_dir
-from train import LogisticRegressionTrainer, NaiveBayesTrainer
+from train import LogisticRegressionTrainer, RandomForestTrainer, DecisionTreeTrainer, KNeighborsTrainer
 
 # Mapping model names to trainer classes
 TRAINER_CLASSES = {
     'LogisticRegression': LogisticRegressionTrainer,
-    'NaiveBayes': NaiveBayesTrainer,
+    'RandomForest': RandomForestTrainer,
+    'DecisionTree': DecisionTreeTrainer,
+    'KNN': KNeighborsTrainer, 
     # Add other trainers as they are implemented
 }
+
 
 def main(args):
     # Load configuration
@@ -30,12 +33,14 @@ def main(args):
     # Initialize and train model
     TrainerClass = TRAINER_CLASSES[model_type]
     trainer = TrainerClass(config["model"])
-    metrics = trainer.train(X_train, y_train, X_val, y_val, output_dir)
+    trainer.train(X_train, y_train, X_val, y_val, output_dir)
 
     print(f"Training completed successfully. Results saved in {output_dir}")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train a classification model")
+    parser = argparse.ArgumentParser(
+        description="Train a classification model")
     parser.add_argument('--config', type=str, required=True,
                         help='Path to the configuration file (YAML format)')
     parser.add_argument('--train_path', type=str, required=True,

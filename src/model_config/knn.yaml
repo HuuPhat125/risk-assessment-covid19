@@ -1,0 +1,9 @@
+model:
+  type: KNN
+  params:
+    n_neighbors: 5
+    weights: "uniform"
+    # algorithm: kd_tree
+    p: 2
+    metric: "minkowski"
+    init_log: True
