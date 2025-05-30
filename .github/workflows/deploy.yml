@@ -1,10 +1,8 @@
 name: SageMaker Sentiment Analysis CI/CD - Production
 
 on:
-  # push:
-  #   branches: [master]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 jobs:
   deploy-model:
@@ -21,27 +19,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install boto3 sagemaker pandas wget s3fs python-dotenv scikit-learn numpy nltk beautifulsoup4 html5lib tabulate bandit trufflehog
-
-      - name: Run Bandit
-        run: |
-          bandit -r . -f json -o bandit-report.json || true
-
-      - name: Run TruffleHog
-        run: |
-          trufflehog git . || true
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectKey=lbngyn_sagemaker-deployment
-            -Dsonar.organization=lbngyn
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
+          python -m pip install --upgrade pip
+          pip install -r src/requirements.txt
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -50,22 +29,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Terminate existing endpoint
-        continue-on-error: true
-        run: |
-          python - <<EOF
-          import boto3
-
-          client = boto3.client('sagemaker')
-          endpoint_name = '${{ secrets.ENDPOINT_NAME }}'
-
-          try:
-              client.delete_endpoint(EndpointName=endpoint_name)
-              print(f'Endpoint {endpoint_name} deleted')
-          except Exception as e:
-              print(f'No endpoint to delete or error: {e}')
-          EOF
-
       - name: Deploy model to SageMaker
         env:
           PREFIX: ${{ secrets.PREFIX }}
@@ -73,53 +36,52 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
           IAM_ROLE_NAME: ${{ secrets.IAM_ROLE_NAME }}
         run: |
-          cd Project
-          python deploy.py
+          python deploy.py --model_config logistic_regression
 
-      - name: Save endpoint name
-        id: save-endpoint
-        run: |
-          echo "endpoint_name=$(jq -r '.endpoint_name' Project/deployment_output/endpoint_info.json)" >> "$GITHUB_OUTPUT"
+      # - name: Save endpoint name
+      #   id: save-endpoint
+      #   run: |
+      #     echo "endpoint_name=$(jq -r '.endpoint_name' Project/deployment_output/endpoint_info.json)" >> "$GITHUB_OUTPUT"
 
       - name: Deploy API Gateway + Lambda via CloudFormation
-        env:
-          ENDPOINT_NAME: ${{ steps.save-endpoint.outputs.endpoint_name }}
+        # env:
+        #   ENDPOINT_NAME: ${{ steps.save-endpoint.outputs.endpoint_name }}
         run: |
           aws cloudformation deploy \
-            --template-file Project/CloudFormation.yml \
-            --stack-name sentiment-api-stack \
+            --template-file src/CloudFormation.yml \
+            --stack-name ml \
             --capabilities CAPABILITY_NAMED_IAM \
-            --parameter-overrides EndpointName=${ENDPOINT_NAME}
+            --parameter-overrides EndpointName=logistic-regression-endpoint
       
 
-      - name: Get API Gateway URL from CloudFormation outputs
-        id: get-api-url
-        run: |
-          api_url=$(aws cloudformation describe-stacks \
-            --stack-name sentiment-api-stack \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text)
-          echo "API_URL=$api_url" >> $GITHUB_ENV
+      # - name: Get API Gateway URL from CloudFormation outputs
+      #   id: get-api-url
+      #   run: |
+      #     api_url=$(aws cloudformation describe-stacks \
+      #       --stack-name sentiment-api-stack \
+      #       --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+      #       --output text)
+      #     echo "API_URL=$api_url" >> $GITHUB_ENV
 
-      - name: Replace API URL in index.html
-        run: |
-          sed -i 's|<!--API_URL_PLACEHOLDER-->|${{ env.API_URL }}|g' Project/website/index.html
+      # - name: Replace API URL in index.html
+      #   run: |
+      #     sed -i 's|<!--API_URL_PLACEHOLDER-->|${{ env.API_URL }}|g' Project/website/index.html
 
-      - name: Create S3 bucket if it does not exist
-        run: |
-          if aws s3 ls "s3://sentiment-analysis-webapp-nhom21" 2>&1 | grep -q 'NoSuchBucket'; then
-            echo "Bucket does not exist. Creating..."
-            aws s3 mb s3://sentiment-analysis-webapp-nhom21 --region ap-southeast-1
-          else
-            echo "Bucket already exists. Skipping creation."
-          fi
+      # - name: Create S3 bucket if it does not exist
+      #   run: |
+      #     if aws s3 ls "s3://sentiment-analysis-webapp-nhom21" 2>&1 | grep -q 'NoSuchBucket'; then
+      #       echo "Bucket does not exist. Creating..."
+      #       aws s3 mb s3://sentiment-analysis-webapp-nhom21 --region ap-southeast-1
+      #     else
+      #       echo "Bucket already exists. Skipping creation."
+      #     fi
 
-      - name: Deploy website to S3
-        run: |
-          aws s3 cp Project/website/ s3://sentiment-analysis-webapp-nhom21/ --recursive
+      # - name: Deploy website to S3
+      #   run: |
+      #     aws s3 cp Project/website/ s3://sentiment-analysis-webapp-nhom21/ --recursive
 
 
-      - name: Echo website URL
-        run: |
-          echo "✅ Website deployed at:"
-          echo "http://sentiment-analysis-webapp-nhom21.s3-website-ap-southeast-1.amazonaws.com"
+      # - name: Echo website URL
+      #   run: |
+      #     echo "✅ Website deployed at:"
+      #     echo "http://sentiment-analysis-webapp-nhom21.s3-website-ap-southeast-1.amazonaws.com"

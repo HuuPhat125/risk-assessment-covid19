@@ -3,8 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+model.tar.gz
+details.txt
+cleanup_aws.py
 .env
 cache/
+results
 data/Covid Data.csv
 data/data.csv
 .vscode/
