@@ -41,7 +41,12 @@ class KNeighbors:
         # Dùng KDTree nếu phù hợp
         self.use_kdtree = (
             algorithm == 'kd_tree' or
-            (algorithm == 'auto' and isinstance(metric, str) and metric == 'minkowski' and (p == 2) or (p == 1)) 
+            (
+                algorithm == 'auto' and 
+                isinstance(metric, str) and 
+                metric == 'minkowski' and 
+                (p == 1 or p == 2)
+            )
         )
 
         if init_log:
