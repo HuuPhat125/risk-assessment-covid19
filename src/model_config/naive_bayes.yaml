@@ -1,0 +1,5 @@
+model:
+  type: NaiveBayes
+  params:
+    continuous_features: [3]
+    use_smoothing: True
