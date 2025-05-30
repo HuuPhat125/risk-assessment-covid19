@@ -2,13 +2,14 @@ import argparse
 from pathlib import Path
 from utils.data_processing import load_data
 from utils.model_utils import load_config, create_output_dir
-from train import LogisticRegressionTrainer, RandomForestTrainer, DecisionTreeTrainer
+from train import LogisticRegressionTrainer, RandomForestTrainer, DecisionTreeTrainer, KNeighborsTrainer
 
 # Mapping model names to trainer classes
 TRAINER_CLASSES = {
     'LogisticRegression': LogisticRegressionTrainer,
     'RandomForest': RandomForestTrainer,
     'DecisionTree': DecisionTreeTrainer,
+    'KNN': KNeighborsTrainer, 
     # Add other trainers as they are implemented
 }
 
