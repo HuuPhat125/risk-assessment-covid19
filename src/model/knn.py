@@ -4,15 +4,16 @@ from collections import Counter
 from typing import Callable
 from tqdm import tqdm
 from scipy.spatial import KDTree
+from typing import Union, Callable
 
 class KNeighbors: 
     def __init__(
         self, 
         n_neighbors: int = 5, 
-        weights: str | Callable | None = 'uniform', 
-        algorithm: str = 'auto',  
-        p: float = 2, 
-        metric: str | Callable = 'minkowski', 
+        weights: Union[str, Callable, None] = 'uniform',
+        algorithm: str = 'auto',
+        p: float = 2.0,
+        metric: Union[str, Callable] = 'minkowski',
         init_log: bool = True, 
         batch_size: int = 100,
     ):
