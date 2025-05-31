@@ -17,7 +17,7 @@ class RandomForest:
         min_samples_split: float | int = 2,
         min_samples_leaf: float | int = 1,
         max_features: int | float | None = 'sqrt',
-        random_state: int | None = None,
+        random_state: int = 0,
         max_leaf_nodes: int | None = None,
         bootstrap: bool = True,
         max_samples: int | float | None = None,
@@ -133,7 +133,7 @@ class RandomForest:
                 min_samples_split=self.min_samples_split,
                 min_samples_leaf=self.min_samples_leaf,
                 max_features=max_feats,
-                random_state=self.random_state + i,  # hoặc self.random_state + i nếu muốn kiểm soát seed từng cây
+                random_state=self.random_state + i, 
                 init_log=False
             )
             tree.fit(X_sample, y_sample)

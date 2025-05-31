@@ -11,7 +11,7 @@ class RandomForestTrainer:
     def train(self, X_train, y_train, X_val, y_val, output_dir: Path):
         # Setup log 
         logger = setup_logging(output_dir / 'training_log.txt')
-        logger.info(f"Training Random Forest with parameters: {self.config.get('params', {})}")
+        logger.info(f"Training Random Forest from scratch with parameters: {self.config.get('params', {})}")
 
         # fit 
         self.model.fit(X=X_train, y=y_train)
@@ -40,4 +40,4 @@ class RandomForestTrainer:
         # save model 
         save_checkpoint(self.model, output_dir, 'RF_model')
 
-        return self.model
+        return self.model, train_metrics,  val_metrics
