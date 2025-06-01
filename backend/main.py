@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from router import  hospitals
+from router import  hospitals, news
 
 app = FastAPI()
 
@@ -23,6 +23,7 @@ app.add_middleware(
 
 # Mount router
 app.include_router(hospitals.router, prefix="/hospitals", tags=["hospitals"])
+app.include_router(news.router)
 
 @app.get("/")
 def read_root():
