@@ -38,6 +38,6 @@ class KNeighborsTrainer:
             f"Classification Report:\n{val_metrics['classification_report']}")
         
         # save model 
-        save_checkpoint(self.model, output_dir, 'KNN_model')
+        save_checkpoint(self.model, output_dir, 'model')
 
         return self.model
