@@ -1,10 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: API Gateway + Lambda for SageMaker endpoint
-
-Parameters:
-  EndpointName:
-    Type: String
-    Description: SageMaker Endpoint Name
+Description: Multi-Model API Gateway + Lambda for multiple SageMaker endpoints
 
 Resources:
   LambdaRole:
@@ -28,17 +23,14 @@ Resources:
                   - logs:*
                 Resource: "*"
 
-  InferenceFunction:
+  MultiModelInferenceFunction:
     Type: AWS::Lambda::Function
     Properties:
       Runtime: python3.9
       Handler: index.lambda_handler
-      Timeout: 15
+      Timeout: 30
       MemorySize: 512
       Role: !GetAtt LambdaRole.Arn
-      Environment:
-        Variables:
-          ENDPOINT_NAME: !Ref EndpointName
       Code:
         ZipFile: |
           import boto3
@@ -59,30 +51,67 @@ Resources:
                       },
                       "body": ""
                   }
-
+            
               try:
+                  # Parse request body
                   body = event.get('body', None)
                   if not body:
                       raise ValueError("Request body is empty")
-
-                  # Gửi nguyên JSON body tới SageMaker endpoint
+                
+                  # Parse JSON body
+                  request_data = json.loads(body)
+                
+                  # Extract model_config from request
+                  model_config = request_data.get('model_config')
+                  if not model_config:
+                      raise ValueError("model_config is required in request body")
+                
+                  endpoint_name = f"{model_config.replace('_', '-')}-endpoint"
+                
+                  # Check if this is batch prediction (has 'data' field with array)
+                  if 'data' in request_data and isinstance(request_data['data'], list):
+                      inference_data = request_data['data']
+                      if not request_data['data']:
+                          raise ValueError("No data provided for batch inference")
+                  else:
+                      # Single prediction case 
+                      inference_data = {k: v for k, v in request_data.items() if k != 'model_config'}
+                      
+                      if not inference_data:
+                          raise ValueError("No data provided for inference")
+                
+                  # Send request to the specific SageMaker endpoint
                   response = client.invoke_endpoint(
-                      EndpointName=os.environ["ENDPOINT_NAME"],
+                      EndpointName=endpoint_name,
                       ContentType="application/json",
-                      Body=body.encode('utf-8')
+                      Body=json.dumps(inference_data).encode('utf-8')
                   )
-
+                
                   result = response['Body'].read().decode('utf-8').strip()
-
+                
+                  # Parse result and add model_config info
+                  result_data = json.loads(result)
+                  result_data['model_config'] = model_config
+                  result_data['endpoint_name'] = endpoint_name
+                
                   return {
                       "statusCode": 200,
                       "headers": {
                           "Content-Type": "application/json",
                           "Access-Control-Allow-Origin": "*"
                       },
-                      "body": result
+                      "body": json.dumps(result_data)
                   }
-
+                
+              except json.JSONDecodeError as e:
+                  return {
+                      "statusCode": 400,
+                      "headers": {
+                          "Content-Type": "application/json",
+                          "Access-Control-Allow-Origin": "*"
+                      },
+                      "body": json.dumps({"error": f"Invalid JSON format: {str(e)}"})
+                  }
               except Exception as e:
                   return {
                       "statusCode": 500,
@@ -92,21 +121,27 @@ Resources:
                       },
                       "body": json.dumps({"error": str(e)})
                   }
-
-
-
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: InferenceAPI
+      Name: MultiModelInferenceAPI
       ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+        MaxAge: 300
 
   Integration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref HttpApi
       IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InferenceFunction.Arn}/invocations
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MultiModelInferenceFunction.Arn}/invocations
       PayloadFormatVersion: "2.0"
 
   Route:
@@ -122,7 +157,6 @@ Resources:
       ApiId: !Ref HttpApi
       RouteKey: "OPTIONS /predict"
       Target: !Sub integrations/${Integration}
-
 
   Deployment:
     Type: AWS::ApiGatewayV2::Deployment
@@ -142,13 +176,13 @@ Resources:
   LambdaInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref InferenceFunction
+      FunctionName: !Ref MultiModelInferenceFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/predict
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*
 
 Outputs:
   ApiUrl:
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/prod/predict
     Export:
-      Name: PublicApiUrl
+      Name: MultiModelApiUrl
