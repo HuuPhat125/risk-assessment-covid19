@@ -42,7 +42,7 @@ jobs:
           AWS_DEFAULT_REGION: ap-southeast-1
           IAM_ROLE_NAME: ${{ secrets.IAM_ROLE_NAME }}
         run: |
-          python train_job.py --model_config logistic_regression
+          python train_job.py --model_config logistic_regression decision_tree knn mlp naive_bayes random_forest
           cat details.txt >> report.md
 
       - name: Comment report to PR
