@@ -1,4 +1,5 @@
 from collections import Counter, defaultdict
+import numpy as np
 from math import log, exp, pi, sqrt
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
@@ -116,6 +117,11 @@ class NaiveBayes:
     def predict(self, X):
         if not self._is_fitted:
             raise RuntimeError("NaiveBayes model is not fitted.")
+
+        X = np.array(X)
+        if X.ndim == 1:
+            X = X.reshape(1, -1)
+
         return [self._predict_single(xi) for xi in X]
 
     def _predict_single(self, x):
