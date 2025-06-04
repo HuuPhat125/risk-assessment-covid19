@@ -41,7 +41,7 @@ jobs:
           IAM_ROLE_NAME: ${{ secrets.IAM_ROLE_NAME }}
         run: |
           python train_job.py --model_config logistic_regression
-          cat details.txt >> report.md
+          cat detail.txt >> report.md
 
       - name: Comment report to PR
         if: github.event_name == 'pull_request'
