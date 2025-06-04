@@ -29,56 +29,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy API Gateway + Lambda via CloudFormation
-        run: |
-          aws cloudformation deploy \
-            --template-file src/CloudFormation.yml \
-            --stack-name ml \
-            --capabilities CAPABILITY_NAMED_IAM \
-      
-      - name: Get API Gateway URL from CloudFormation outputs
-        id: get_api_url
-        run: |
-          API_URL=$(aws cloudformation describe-stacks \
-            --stack-name ml \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text)
-          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
-
-      - name: Update Vercel env var NEXT_PUBLIC_PREDICT_API and redeploy
-        id: update_vercel_env
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_PROJECT_ID: prj_hrSaG26N89mNojtBAb9JKxZwPgcL
-          API_PREDICT_URL: ${{ steps.get_api_url.outputs.api_url }}
-        run: |
-          # Lấy ID của biến môi trường hiện tại (nếu có)
-          ENV_ID=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
-            https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env \
-            | jq -r '.env | map(select(.key=="NEXT_PUBLIC_PREDICT_API"))[0].id')
-
-          # Nếu biến đã tồn tại, PATCH để cập nhật
-          if [ "$ENV_ID" != "null" ] && [ -n "$ENV_ID" ]; then
-            echo "🔄 Updating existing env var NEXT_PUBLIC_PREDICT_API"
-            curl -s -X PATCH "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env/${ENV_ID}" \
-              -H "Authorization: Bearer $VERCEL_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{\"value\":\"${API_PREDICT_URL}\",\"target\":[\"production\"]}"
-          else
-            echo "➕ Creating new env var NEXT_PUBLIC_PREDICT_API"
-            curl -s -X POST "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env" \
-              -H "Authorization: Bearer $VERCEL_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{\"key\":\"NEXT_PUBLIC_PREDICT_API\",\"value\":\"${API_PREDICT_URL}\",\"target\":[\"production\"]}"
-          fi
-
-          # 🔁 Trigger redeploy
-          echo "🚀 Triggering Vercel redeploy..."
-          curl -s -X POST "https://api.vercel.com/v13/deployments" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"projectId\": \"${VERCEL_PROJECT_ID}\"}"
-
       - name: Deploy model to SageMaker
         env:
           PREFIX: ${{ secrets.PREFIX }}
