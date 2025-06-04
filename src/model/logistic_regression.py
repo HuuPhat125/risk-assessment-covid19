@@ -3,19 +3,20 @@ import numpy as np
 
 class LogisticRegression:
     def __init__(self, learning_rate=0.001, max_iter=10000, threshold=0.5,
-                 regularization=None, reg_param=0.01):
+                 penalty=None, C=1.0, verbose=False):
         self.learning_rate = learning_rate
         self.max_iter = max_iter
         self.threshold = threshold
+        self.verbose = verbose
 
         # Validate regularization parameters
-        if regularization not in [None, 'l1', 'l2']:
-            raise ValueError("Regularization must be 'l1', 'l2', or None.")
-        if regularization is not None and reg_param <= 0:
+        if penalty not in [None, 'l1', 'l2']:
+            raise ValueError("Penalty must be 'l1', 'l2', or None.")
+        if penalty is not None and C <= 0:
             raise ValueError("Regularization parameter must be positive.")
 
-        self.regularization = regularization
-        self.reg_param = reg_param
+        self.penalty = penalty
+        self.C = C
 
         # Model parameters
         self.weights = None
@@ -38,13 +39,13 @@ class LogisticRegression:
                             (1 - y_true) * np.log(1 - y_pred + epsilon))
 
         reg_loss = 0
-        if self.regularization == 'l1':
-            reg_loss = self.reg_param * np.sum(np.abs(self.weights))
-        elif self.regularization == 'l2':
-            reg_loss = self.reg_param * np.sum(self.weights ** 2)
-        elif self.regularization is not None:
+        if self.penalty == 'l1':
+            reg_loss = self.C * np.sum(np.abs(self.weights))
+        elif self.penalty == 'l2':
+            reg_loss = self.C * np.sum(self.weights ** 2)
+        elif self.penalty is not None:
             raise ValueError(
-                "Invalid regularization type. Use 'l1', 'l2', or None.")
+                "Invalid penalty type. Use 'l1', 'l2', or None.")
 
         return bce_loss + reg_loss
 
@@ -79,10 +80,10 @@ class LogisticRegression:
         db = (1 / n_samples) * np.sum(y_pred - y)
 
         # Apply regularization
-        if self.regularization == 'l1':
-            dw += self.reg_param * np.sign(self.weights)
-        elif self.regularization == 'l2':
-            dw += 2 * self.reg_param * self.weights
+        if self.penalty == 'l1':
+            dw += self.C * np.sign(self.weights)
+        elif self.penalty == 'l2':
+            dw += 2 * self.C * self.weights
 
         return dw, db
 
@@ -154,15 +155,17 @@ class LogisticRegression:
                         self.best_bias = self.bias
                     else:
                         patience_counter += 1
-                        print(
-                            f"No improvement in validation loss. Patience: {patience_counter}/{patience}")
+                        if self.verbose:
+                            print(
+                                f"No improvement in validation loss. Patience: {patience_counter}/{patience}")
 
                     if patience_counter >= patience:
-                        print(f"Early stopping at iteration {iter + 1}.")
+                        if self.verbose:
+                            print(f"Early stopping at iteration {iter + 1}.")
                         break
 
             # Print loss every 200 iterations
-            if iter % 200 == 0 or iter == self.max_iter - 1:
+            if self.verbose and (iter % 200 == 0 or iter == self.max_iter - 1):
                 if has_val:
                     print(
                         f"Iteration {iter}/{self.max_iter}: Train Loss = {train_loss:.4f}, Train Accuracy = {train_accuracy:.4f}, "
@@ -192,9 +195,9 @@ class LogisticRegression:
             raise ValueError("y_true and y_pred must have the same length.")
 
         accuracy = accuracy_score(y_true, y_pred)
-        precision = precision_score(y_true, y_pred)
-        recall = recall_score(y_true, y_pred)
-        f1 = f1_score(y_true, y_pred)
+        precision = precision_score(y_true, y_pred, zero_division=0)
+        recall = recall_score(y_true, y_pred, zero_division=0)
+        f1 = f1_score(y_true, y_pred, zero_division=0)
         report = classification_report(y_true, y_pred)
         conf_matrix = confusion_matrix(y_true, y_pred)
 
