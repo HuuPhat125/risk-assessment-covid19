@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+new_data/
 model.tar.gz
 details.txt
 cleanup_aws.py
