@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import random
 from collections import Counter
+from joblib import Parallel, delayed
+from tqdm import tqdm
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
     f1_score, classification_report
@@ -112,8 +114,21 @@ class RandomForest:
 
         return X[indices], y[indices]
 
+
+    def _build_tree(self, X_sample, y_sample, max_feats, seed_offset):
+        tree = DecisionTree(
+            criterion=self.criterion,
+            max_depth=self.max_depth,
+            min_samples_split=self.min_samples_split,
+            min_samples_leaf=self.min_samples_leaf,
+            max_features=max_feats,
+            random_state=self.random_state + seed_offset,
+            init_log=False
+        )
+        tree.fit(X_sample, y_sample)
+        return tree
+
     def fit(self, X, y):
-        # Convert data to numpy
         if isinstance(X, (pd.DataFrame, pd.Series)):
             X = X.to_numpy()
         if isinstance(y, (pd.DataFrame, pd.Series)):
@@ -123,28 +138,25 @@ class RandomForest:
         self.n_features = X.shape[1]
         max_feats = self._determine_max_features(self.n_features)
 
-        self.trees = []
-        for i in range(self.n_estimators):
-            X_sample, y_sample = self._sample_data(X, y)
+        # Chuẩn bị dữ liệu mẫu trước
+        samples = [
+            self._sample_data(X, y) for _ in range(self.n_estimators)
+        ]
 
-            tree = DecisionTree(
-                criterion=self.criterion,
-                max_depth=self.max_depth,
-                min_samples_split=self.min_samples_split,
-                min_samples_leaf=self.min_samples_leaf,
-                max_features=max_feats,
-                random_state=self.random_state + i, 
-                init_log=False
-            )
-            tree.fit(X_sample, y_sample)
-            self.trees.append(tree)
+        self.trees = Parallel(n_jobs=-1)(
+            delayed(self._build_tree)(X_s, y_s, max_feats, i)
+            for i, (X_s, y_s) in enumerate(samples)
+        )
 
     def predict(self, X):
         if isinstance(X, (pd.DataFrame, pd.Series)):
             X = X.to_numpy()
 
-        predictions = np.array([tree.predict(X) for tree in self.trees])  # shape: (n_estimators, n_samples)
-
+        predictions = np.array(
+            Parallel(n_jobs=-1)(
+                delayed(tree.predict)(X) for tree in self.trees
+            )
+        )
         y_pred = []
         for sample_preds in predictions.T:
             counts = Counter(sample_preds)

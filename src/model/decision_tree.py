@@ -67,6 +67,7 @@ class DecisionTree:
         self.max_features = max_features
         self.random_state = random_state
         self.max_leaf_nodes = max_leaf_nodes
+        self.leaf_count = 0
 
         self.root = None
 
@@ -166,12 +167,14 @@ class DecisionTree:
     def _build_tree(self, X, y, depth):
         node = TreeNode()
 
-        if self.max_depth is not None and depth >= self.max_depth:
+        if (
+            self.max_depth is not None and depth >= self.max_depth or
+            len(np.unique(y)) == 1 or
+            len(y) < self.min_samples_split or
+            (self.max_leaf_nodes is not None and self.leaf_count >= self.max_leaf_nodes)
+        ):
             node.proba = self._cal_proba(y, self.n_classes)
-            return node
-
-        if len(np.unique(y)) == 1 or len(y) < self.min_samples_split:
-            node.proba = self._cal_proba(y, self.n_classes)
+            self.leaf_count += 1
             return node
 
         feature, value = self._best_split(X, y)
@@ -196,17 +199,14 @@ class DecisionTree:
         self.n_features = X.shape[1]
         self.root = self._build_tree(X, y, depth=0)
 
-    def predict_one(self, x, node=None):
-        if node is None:
-            node = self.root
-
-        if node.is_leaf():
-            return np.argmax(node.proba)
-
-        if x[node.split_feature] <= node.feature_value:
-            return self.predict_one(x, node.left_child)
-        else:
-            return self.predict_one(x, node.right_child)
+    def predict_one(self, x):
+        node = self.root
+        while not node.is_leaf():
+            if x[node.split_feature] <= node.feature_value:
+                node = node.left_child
+            else:
+                node = node.right_child
+        return np.argmax(node.proba)
 
     def predict(self, X):
         X, y = self.ensure_numpy(X, [])

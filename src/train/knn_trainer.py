@@ -40,4 +40,4 @@ class KNeighborsTrainer:
         # save model 
         save_checkpoint(self.model, output_dir, 'KNN_model')
 
-        return self.model
+        return self.model, train_metrics, val_metrics
