@@ -1,8 +1,6 @@
 name: Risk assessment covid19 CI/CD - Development
 
 on:
-  # push:
-  #   branches: [train]
   pull_request:
     branches: [train]
 
