@@ -3,7 +3,6 @@ import sagemaker
 from sagemaker.sklearn.estimator import SKLearn
 import boto3
 import os
-import shutil
 from pathlib import Path
 import tarfile
 import tempfile
@@ -11,12 +10,9 @@ import pandas as pd
 import re
 from dotenv import load_dotenv
 from datetime import datetime
-import glob
-
 
 load_dotenv(dotenv_path=".env")
 
-# === Hàm phụ trợ ===
 def upload_to_s3(local_path, s3_key, bucket_name, s3_client):
     if not Path(local_path).exists():
         raise FileNotFoundError(f"⚠️ File {local_path} không tồn tại.")
@@ -41,7 +37,7 @@ def append_model_version_to_s3(job_name, metrics, bucket_name, key):
         "accuracy": metrics.get("Accuracy"),
         "precision": metrics.get("Precision"),
         "recall": metrics.get("Recall"),
-        "f1_score": metrics.get("F1")
+        "f1_score": metrics.get("F1 Score")
     }])
 
     df = pd.concat([df, new_row], ignore_index=True)
@@ -81,7 +77,7 @@ def run_single_job(model_config, session, s3_client, bucket_name, region, role_a
         'val': f's3://{bucket_name}/{prefix}/data/val/'
     })
 
-    # === Trích xuất metrics ===
+    # === Trích xuất metrics và log chi tiết ===
     job_name = sklearn.latest_training_job.name
     print(f"✅ SageMaker job name: {job_name}")
 
@@ -90,6 +86,8 @@ def run_single_job(model_config, session, s3_client, bucket_name, region, role_a
     s3_client.download_file(bucket_name, model_s3_key, local_tar_path)
 
     metrics = {}
+    detail_log_text = ""
+
     with tarfile.open(local_tar_path, "r:gz") as tar:
         with tempfile.TemporaryDirectory() as tmpdir:
             tar.extractall(tmpdir)
@@ -101,19 +99,19 @@ def run_single_job(model_config, session, s3_client, bucket_name, region, role_a
                 start_index = next((i for i, line in enumerate(lines) if "Validation results" in line), None)
                 if start_index is not None:
                     selected_lines = lines[start_index:]
+                    detail_log_text = "".join(selected_lines)
+
                     for line in selected_lines:
                         for key in ["Accuracy", "Precision", "Recall", "F1 Score"]:
                             match = re.search(rf"{key}:\s*([0-9.]+)", line)
                             if match:
                                 metrics[key] = float(match.group(1))
 
-                    with open(f"details_{model_config}.txt", "w") as f:
-                        f.writelines(selected_lines)
-                    print(f"✅ Saved log to details_{model_config}.txt")
+                    print(f"✅ Đã trích xuất log chi tiết cho {model_config}")
                 else:
-                    print("⚠️ 'Validation results' not found in training_log.txt")
+                    print("⚠️ 'Validation results' không tìm thấy trong training_log.txt")
             else:
-                print("⚠️ training_log.txt not found in model artifact.")
+                print("⚠️ training_log.txt không tồn tại trong model artifact.")
 
     append_model_version_to_s3(
         job_name=job_name,
@@ -121,21 +119,24 @@ def run_single_job(model_config, session, s3_client, bucket_name, region, role_a
         bucket_name=bucket_name,
         key=f"{prefix}/model_version.csv"
     )
-    # === Xóa file nếu có flag --delete ===
+
     if delete_files:
-        for file in [local_tar_path, f"details_{model_config}.txt"]:
+        for file in [local_tar_path]:
             try:
                 os.remove(file)
                 print(f"🗑️ Đã xóa file {file}")
             except FileNotFoundError:
                 print(f"⚠️ File {file} không tồn tại để xóa")
 
+    return detail_log_text
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_config', type=str, nargs='+', required=True,
                         help="Danh sách tên file YAML trong thư mục model_config (không có phần mở rộng .yaml)")
     parser.add_argument('--delete', action='store_true',
-                        help="Nếu có cờ này, sẽ xóa file model và log sau khi train")
+                        help="Nếu có cờ này, sẽ xóa file model sau khi train")
     args = parser.parse_args()
 
     REGION = os.environ['AWS_REGION']
@@ -145,10 +146,11 @@ def main():
     BUCKET_NAME = session.default_bucket()
     s3_client = boto3.client('s3', region_name=REGION)
 
+    all_details = []
     for model_config in args.model_config:
         print(f"\n=== 🚀 Bắt đầu train với config: {model_config} ===")
         try:
-            run_single_job(
+            detail_log = run_single_job(
                 model_config=model_config,
                 session=session,
                 s3_client=s3_client,
@@ -157,8 +159,16 @@ def main():
                 role_arn=IAM_ROLE_ARN,
                 delete_files=args.delete
             )
+            if detail_log:
+                header = f"\n\n===== Log chi tiết cho model: {model_config} =====\n"
+                all_details.append(header + detail_log)
         except Exception as e:
             print(f"❌ Lỗi khi xử lý config '{model_config}': {e}")
+
+    if all_details:
+        with open("detail.txt", "w") as f:
+            f.writelines(all_details)
+        print("✅ Đã ghi toàn bộ log chi tiết vào detail.txt")
 
 if __name__ == "__main__":
     main()

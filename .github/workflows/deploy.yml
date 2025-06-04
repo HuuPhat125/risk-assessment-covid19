@@ -36,52 +36,8 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
           IAM_ROLE_NAME: ${{ secrets.IAM_ROLE_NAME }}
         run: |
-          python deploy.py --model_config logistic_regression
-
-      # - name: Save endpoint name
-      #   id: save-endpoint
-      #   run: |
-      #     echo "endpoint_name=$(jq -r '.endpoint_name' Project/deployment_output/endpoint_info.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy API Gateway + Lambda via CloudFormation
-        # env:
-        #   ENDPOINT_NAME: ${{ steps.save-endpoint.outputs.endpoint_name }}
-        run: |
-          aws cloudformation deploy \
-            --template-file src/CloudFormation.yml \
-            --stack-name ml \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --parameter-overrides EndpointName=logistic-regression-endpoint
-      
-
-      # - name: Get API Gateway URL from CloudFormation outputs
-      #   id: get-api-url
-      #   run: |
-      #     api_url=$(aws cloudformation describe-stacks \
-      #       --stack-name sentiment-api-stack \
-      #       --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-      #       --output text)
-      #     echo "API_URL=$api_url" >> $GITHUB_ENV
+          python deploy.py --model_config logistic_regression,decision_tree,knn,mlp,naive_bayes,random_forest
 
       # - name: Replace API URL in index.html
       #   run: |
       #     sed -i 's|<!--API_URL_PLACEHOLDER-->|${{ env.API_URL }}|g' Project/website/index.html
-
-      # - name: Create S3 bucket if it does not exist
-      #   run: |
-      #     if aws s3 ls "s3://sentiment-analysis-webapp-nhom21" 2>&1 | grep -q 'NoSuchBucket'; then
-      #       echo "Bucket does not exist. Creating..."
-      #       aws s3 mb s3://sentiment-analysis-webapp-nhom21 --region ap-southeast-1
-      #     else
-      #       echo "Bucket already exists. Skipping creation."
-      #     fi
-
-      # - name: Deploy website to S3
-      #   run: |
-      #     aws s3 cp Project/website/ s3://sentiment-analysis-webapp-nhom21/ --recursive
-
-
-      # - name: Echo website URL
-      #   run: |
-      #     echo "✅ Website deployed at:"
-      #     echo "http://sentiment-analysis-webapp-nhom21.s3-website-ap-southeast-1.amazonaws.com"

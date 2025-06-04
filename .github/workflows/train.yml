@@ -1,10 +1,11 @@
 name: Risk assessment covid19 CI/CD - Development
 
 on:
-  # push:
-  #   branches: [train]
   pull_request:
     branches: [train]
+
+    
+permissions: write-all
 
 jobs:
   train-model:
@@ -43,7 +44,7 @@ jobs:
           IAM_ROLE_NAME: ${{ secrets.IAM_ROLE_NAME }}
         run: |
           python train_job.py --model_config logistic_regression
-          cat details.txt >> report.md
+          cat detail.txt >> report.md
 
       - name: Comment report to PR
         if: github.event_name == 'pull_request'
