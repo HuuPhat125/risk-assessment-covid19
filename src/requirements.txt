@@ -3,7 +3,7 @@ pyyaml
 pandas
 s3fs
 beautifulsoup4
-html5li
+html5lib
 matplotlib
 seaborn
 tqdm
