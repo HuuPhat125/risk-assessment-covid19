@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [train]
 
+    
+permissions: write-all
+
 jobs:
   train-model:
     runs-on: ubuntu-latest
